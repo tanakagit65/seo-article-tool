@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SEO記事生成ツール</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root{--bg:#0f1117;--bg2:#171b26;--bg3:#1e2235;--bd:#2a2d3e;--tx:#e2e4f0;--tx2:#8b91b5;--ac:#6c8eff;--ac2:#a78bfa;--gr:#4ade80;--rd:#f87171;--yw:#fbbf24}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:-apple-system,"Hiragino Sans","Meiryo",sans-serif;background:var(--bg);color:var(--tx);font-size:13px;line-height:1.6}
+#app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.hdr{background:var(--bg2);border-bottom:1px solid var(--bd);padding:10px 18px;display:flex;align-items:center;gap:12px;flex-shrink:0;z-index:10;flex-wrap:wrap}
+.hdr-logo{font-size:15px;font-weight:700;background:linear-gradient(135deg,var(--ac),var(--ac2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;white-space:nowrap}
+.hdr-bc{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--tx2);flex:1;min-width:0}
+.bc-link{cursor:pointer;padding:2px 4px;border-radius:4px}.bc-link:hover{color:var(--tx);background:var(--bg3)}
+.sep{color:var(--bd)}
+.hdr-right{display:flex;align-items:center;gap:8px;margin-left:auto;flex-shrink:0}
+.ikey-wrap{display:flex;align-items:center;gap:5px;background:var(--bg3);border:1px solid var(--bd);border-radius:7px;padding:4px 9px}
+.ikey-wrap label{font-size:10px;color:var(--tx2);white-space:nowrap}
+.ikey-wrap input{background:none;border:none;color:var(--tx);font-size:11px;font-family:monospace;width:140px;outline:none}
+.conn-badge{display:flex;align-items:center;gap:5px;font-size:11px;padding:4px 10px;border-radius:6px;background:var(--bg3);border:1px solid var(--bd)}
+.conn-dot{width:7px;height:7px;border-radius:50%}
+.body-wrap{display:flex;flex:1;overflow:hidden}
+.sidebar{width:216px;background:var(--bg2);border-right:1px solid var(--bd);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
+.sb-sec{padding:10px 8px;border-bottom:1px solid var(--bd)}
+.sb-label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--tx2);padding:0 6px;margin-bottom:4px}
+.sb-item{padding:7px 10px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:8px;color:var(--tx2)}
+.sb-item:hover,.sb-item.act{background:var(--bg3);color:var(--tx)}
+.sb-dot{width:8px;height:8px;border-radius:50%;background:var(--bd);flex-shrink:0}
+.sb-item.act .sb-dot{background:var(--ac)}
+.sb-art{font-size:12px;max-width:138px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.content{flex:1;overflow-y:auto;padding:22px 26px}
+.card{background:var(--bg2);border:1px solid var(--bd);border-radius:10px;padding:18px;margin-bottom:14px}
+.card-title{font-size:14px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.btn{padding:7px 14px;border-radius:7px;border:none;cursor:pointer;font-size:12px;font-weight:500;display:inline-flex;align-items:center;gap:5px;transition:opacity .15s;font-family:inherit}
+.btn-ac{background:var(--ac);color:#fff}.btn-ac:hover{opacity:.85}
+.btn-ac2{background:var(--ac2);color:#fff}.btn-ac2:hover{opacity:.85}
+.btn-sec{background:var(--bg3);color:var(--tx);border:1px solid var(--bd)}.btn-sec:hover{background:var(--bd)}
+.btn-gr{background:#16a34a;color:#fff}.btn-gr:hover{opacity:.85}
+.btn-rd{background:#dc2626;color:#fff}.btn-rd:hover{opacity:.85}
+.btn-sm{padding:4px 9px;font-size:11px}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.fg{margin-bottom:12px}
+.fg label{display:block;font-size:11px;color:var(--tx2);margin-bottom:3px}
+.fi{width:100%;background:var(--bg3);border:1px solid var(--bd);color:var(--tx);padding:7px 10px;border-radius:7px;font-size:13px;font-family:inherit}
+.fi:focus{outline:none;border-color:var(--ac)}.fi::placeholder{color:var(--tx2)}
+textarea.fi{resize:vertical;min-height:70px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tabs{display:flex;border-bottom:1px solid var(--bd);margin-bottom:18px;overflow-x:auto}
+.tab{padding:8px 14px;font-size:12px;cursor:pointer;border-bottom:2px solid transparent;color:var(--tx2);white-space:nowrap}
+.tab:hover{color:var(--tx)}.tab.act{color:var(--ac);border-bottom-color:var(--ac)}.tab.done{color:var(--gr)}.tab.done.act{border-bottom-color:var(--gr)}
+.badge{display:inline-flex;align-items:center;font-size:10px;padding:1px 7px;border-radius:999px}
+.b-done{background:rgba(74,222,128,.15);color:var(--gr)}.b-pend{background:rgba(251,191,36,.15);color:var(--yw)}
+.out-ta{width:100%;background:var(--bg3);border:1px solid var(--bd);color:var(--tx);padding:10px;border-radius:7px;font-size:12px;font-family:monospace;min-height:200px;resize:vertical;line-height:1.5}
+.out-ta:focus{outline:none;border-color:var(--ac)}
+.out-actions{display:flex;gap:6px;margin-top:8px;justify-content:flex-end;align-items:center}
+.save-status{font-size:11px;color:var(--gr);margin-right:auto}
+.img-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.img-card{background:var(--bg3);border:1px solid var(--bd);border-radius:8px;overflow:hidden}
+.img-holder{height:150px;display:flex;align-items:center;justify-content:center;color:var(--tx2);font-size:11px}
+.img-card img{width:100%;height:150px;object-fit:cover;display:block}
+.img-card-body{padding:10px}
+.prompt-ta{width:100%;background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:6px 8px;border-radius:5px;font-size:11px;font-family:monospace;resize:vertical;min-height:56px;margin-bottom:6px}
+.prompt-ta:focus{outline:none;border-color:var(--ac)}
+.img-card-label{font-size:11px;color:var(--tx2);margin-bottom:4px}
+.preview-frame{background:#fff;border-radius:6px;padding:24px;color:#1a1a1a;font-size:13px;line-height:1.8;max-height:480px;overflow-y:auto}
+.preview-frame h2{font-size:17px;margin:18px 0 8px;border-left:3px solid #6c8eff;padding-left:10px}
+.preview-frame h3{font-size:14px;margin:14px 0 6px}
+.preview-frame p{margin-bottom:10px}
+.preview-frame table{border-collapse:collapse;width:100%;margin:12px 0;font-size:12px}
+.preview-frame th,.preview-frame td{border:1px solid #ddd;padding:7px 10px}
+.preview-frame th{background:#f0f4ff}
+.preview-frame img{max-width:100%;border-radius:6px;margin:8px 0}
+.preview-frame details{border:1px solid #ddd;border-radius:6px;padding:12px;margin-bottom:8px}
+.preview-frame summary{font-weight:600;cursor:pointer}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp .6s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:100}
+.modal{background:var(--bg2);border:1px solid var(--bd);border-radius:12px;padding:24px;width:400px;max-width:92vw}
+.modal-title{font-size:15px;font-weight:600;margin-bottom:16px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.home-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;margin-top:16px}
+.proj-card{background:var(--bg2);border:1px solid var(--bd);border-radius:10px;padding:16px;cursor:pointer;transition:border-color .15s}
+.proj-card:hover{border-color:var(--ac)}
+.proj-card-name{font-size:14px;font-weight:600;margin-bottom:4px}
+.proj-card-meta{font-size:11px;color:var(--tx2)}
+.proj-card-add{border:2px dashed var(--bd);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:var(--tx2);font-size:12px;min-height:96px;background:transparent}
+.proj-card-add:hover{border-color:var(--ac);color:var(--ac)}
+.art-item{background:var(--bg2);border:1px solid var(--bd);border-radius:7px;padding:12px 14px;margin-bottom:7px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:border-color .15s}
+.art-item:hover{border-color:var(--ac)}
+.stepbar{display:flex;align-items:center;gap:4px;margin-bottom:16px;flex-wrap:wrap}
+.step{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--tx2)}
+.sn{width:20px;height:20px;border-radius:50%;background:var(--bg3);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:10px}
+.step.done .sn{background:var(--gr);border-color:var(--gr);color:#000}
+.step.cur .sn{background:var(--ac);border-color:var(--ac);color:#fff}
+.step-line{width:20px;height:1px;background:var(--bd)}
+.color-row{display:flex;align-items:center;gap:8px}
+.color-row input[type=color]{width:36px;height:28px;border:1px solid var(--bd);border-radius:5px;background:none;cursor:pointer;padding:2px}
+.alert{padding:9px 12px;border-radius:7px;font-size:12px;margin-bottom:12px}
+.alert-info{background:rgba(108,142,255,.12);border:1px solid rgba(108,142,255,.3);color:var(--ac)}
+.alert-err{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);color:var(--rd)}
+.alert-ok{background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.3);color:var(--gr)}
+/* Setup */
+.setup-wrap{max-width:680px;margin:0 auto;padding:32px 0}
+.setup-step{display:flex;gap:14px;margin-bottom:24px}
+.setup-num{width:28px;height:28px;border-radius:50%;background:var(--ac);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.setup-body{flex:1}
+.setup-body h3{font-size:14px;font-weight:600;margin-bottom:8px}
+.code-block{background:var(--bg3);border:1px solid var(--bd);border-radius:7px;padding:12px;font-family:monospace;font-size:11px;color:var(--tx2);white-space:pre;overflow-x:auto;margin:8px 0;line-height:1.6}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// ── State ──
+const S = {
+  view:'home', projects:[], pid:null, aid:null, tab:0,
+  iKey:'', sbUrl:'', sbKey:'',
+  loading:{}, modal:null, connected:false, connecting:false,
+  saveStatus:'', articles:{} // articles keyed by project_id
+};
+let sb = null;
+
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2)}
+
+function defaultProject(name){
+  return{id:uid(),name:name||'新規プロジェクト',settings:{
+    siteName:'',siteUrl:'',serviceDesc:'',ctaText:'無料で試してみる',ctaUrl:'',
+    mainColor:'#6c8eff',fontFamily:'Noto Sans JP',ngWords:'',
+    tone:'丁寧で親しみやすい口調。です・ます調。',
+    targetReader:'',authorName:'',authorProfile:'',internalLinks:'',category:''
+  }};
+}
+
+function defaultArticle(kw,pid){
+  return{id:uid(),project_id:pid,keyword:kw,research:'',structure:'',body:'',
+    imagePrompts:[],createdAt:new Date().toLocaleDateString('ja-JP')};
+}
+
+function getProject(){return S.projects.find(p=>p.id===S.pid)||null}
+function getArticles(){return S.articles[S.pid]||[]}
+function getArticle(){return getArticles().find(a=>a.id===S.aid)||null}
+
+function setLoading(k,v){S.loading[k]=v;render()}
+function setSaveStatus(msg){S.saveStatus=msg;render();if(msg)setTimeout(()=>{S.saveStatus='';render()},2000)}
+
+// ── Persistent storage for credentials ──
+async function storeCredentials(){
+  try{
+    await window.storage.set('sb-url',S.sbUrl);
+    await window.storage.set('sb-key',S.sbKey);
+    await window.storage.set('ideogram-key',S.iKey);
+  }catch(e){}
+}
+async function loadCredentials(){
+  try{
+    const u=await window.storage.get('sb-url');
+    const k=await window.storage.get('sb-key');
+    const ik=await window.storage.get('ideogram-key');
+    if(u)S.sbUrl=u.value;
+    if(k)S.sbKey=k.value;
+    if(ik)S.iKey=ik.value;
+    if(S.sbUrl&&S.sbKey)await connectSupabase(true);
+  }catch(e){render();}
+}
+
+// ── Supabase ──
+async function connectSupabase(silent=false){
+  if(!S.sbUrl||!S.sbKey){if(!silent)alert('URLとキーを入力してください');return;}
+  S.connecting=true;render();
+  try{
+    const{createClient}=window.supabase;
+    sb=createClient(S.sbUrl,S.sbKey);
+    const{error}=await sb.from('projects').select('id').limit(1);
+    if(error)throw error;
+    S.connected=true;
+    await storeCredentials();
+    await fetchProjects();
+  }catch(e){
+    sb=null;S.connected=false;
+    if(!silent)alert('接続エラー: '+e.message+'\n\nURLとキーを確認してください。またRLSが無効になっているか確認してください。');
+  }
+  S.connecting=false;render();
+}
+
+async function fetchProjects(){
+  const{data,error}=await sb.from('projects').select('*').order('created_at');
+  if(error)throw error;
+  S.projects=(data||[]).map(r=>({id:r.id,name:r.name,settings:r.settings||{}}));
+  render();
+}
+
+async function fetchArticles(pid){
+  const{data,error}=await sb.from('articles').select('*').eq('project_id',pid).order('created_at');
+  if(error)throw error;
+  S.articles[pid]=(data||[]).map(mapArticleRow);
+  render();
+}
+
+function mapArticleRow(r){
+  return{
+    id:r.id,project_id:r.project_id,keyword:r.keyword||'',
+    research:r.research||'',structure:r.structure||'',body:r.body||'',
+    imagePrompts:r.image_prompts||[],
+    createdAt:new Date(r.created_at).toLocaleDateString('ja-JP')
+  };
+}
+
+async function dbSaveProject(p){
+  const{error}=await sb.from('projects').upsert({id:p.id,name:p.name,settings:p.settings});
+  if(error)throw error;
+}
+
+async function dbDeleteProject(id){
+  const{error}=await sb.from('projects').delete().eq('id',id);
+  if(error)throw error;
+}
+
+async function dbSaveArticle(a){
+  const{error}=await sb.from('articles').upsert({
+    id:a.id,project_id:a.project_id,keyword:a.keyword,
+    research:a.research,structure:a.structure,body:a.body,
+    image_prompts:a.imagePrompts,updated_at:new Date().toISOString()
+  });
+  if(error)throw error;
+}
+
+async function dbDeleteArticle(id){
+  const{error}=await sb.from('articles').delete().eq('id',id);
+  if(error)throw error;
+}
+
+function updateArticleLocal(field,val){
+  const arr=S.articles[S.pid]||[];
+  const idx=arr.findIndex(a=>a.id===S.aid);
+  if(idx<0)return;
+  arr[idx]={...arr[idx],[field]:val};
+  S.articles[S.pid]=[...arr];
+}
+
+async function saveArticleField(field,val){
+  updateArticleLocal(field,val);
+  render();
+  try{await dbSaveArticle(getArticle());setSaveStatus('✓ 保存済み');}
+  catch(e){setSaveStatus('保存エラー: '+e.message);}
+}
+
+// ── Claude API ──
+async function callClaude(system,user,maxTok=2000){
+  const r=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:'claude-sonnet-4-5-20251022',max_tokens:maxTok,system,messages:[{role:'user',content:user}]})
+  });
+  const d=await r.json();
+  if(d.error)throw new Error(d.error.message);
+  return d.content?.map(c=>c.text||'').join('')||'';
+}
+
+// ── Ideogram API ──
+async function generateIdeogramImage(prompt){
+  if(!S.iKey)throw new Error('Ideogram APIキーが未設定です');
+  const r=await fetch('https://api.ideogram.ai/generate',{
+    method:'POST',headers:{'Content-Type':'application/json','Api-Key':S.iKey},
+    body:JSON.stringify({image_request:{prompt,model:'V_2_TURBO',aspect_ratio:'ASPECT_16_9',style_type:'REALISTIC'}})
+  });
+  const d=await r.json();
+  if(!d.data?.[0]?.url)throw new Error(d.detail||'画像生成失敗');
+  return d.data[0].url;
+}
+
+// ── Prompt builders ──
+function bp_research(p,kw){const s=p.settings;return{
+  system:'あなたは日本のSEOコンテンツ戦略の第一人者です。',
+  user:`## プロジェクト\nサイト:${s.siteName} ${s.siteUrl}\nサービス:${s.serviceDesc}\nターゲット:${s.targetReader}\nNG語句:${s.ngWords||'なし'}\n\n## キーワード\n「${kw}」\n\n## 出力（Markdown）\n### 1.検索意図分析\n### 2.ターゲットペルソナ\n### 3.競合構成と差別化ポイント\n### 4.関連KW・共起語（20語）\n### 5.コンテンツ設計指針`
+};}
+function bp_structure(p,a){const s=p.settings;return{
+  system:'あなたはSEO/AIOに精通した日本語コンテンツアーキテクトです。',
+  user:`## リサーチ\n${a.research}\n\n## 設定\nサービス:${s.serviceDesc} トンマナ:${s.tone}\nCTA:${s.ctaText}→${s.ctaUrl} 著者:${s.authorName}\nNG語句:${s.ngWords||'なし'}\n\n## 出力（Markdown）\n### メタ情報（title・description・OG）\n### 記事構成（H2×6〜8本、各H2に執筆ポイント・共起語・コンテンツ形式）\n### FAQセクション設計（5問）\n### CTA配置計画\n### 使用構造化データ種別`
+};}
+function bp_body(p,a){const s=p.settings;return{
+  system:'あなたはSEO・AIOに最適化された日本語HTMLライターです。',
+  user:`## 構成\n${a.structure}\n\n## 設定\nサイト:${s.siteName} カラー:${s.mainColor}\nCTA:${s.ctaText}/${s.ctaUrl}\n著者:${s.authorName}（${s.authorProfile}）\n内部リンク:\n${s.internalLinks||'なし'}\nNG語句:${s.ngWords||'なし'}\n\n## HTML仕様\nH1なし / 画像プレースホルダー[IMAGE_1]〜[IMAGE_3] / 比較はHTMLテーブル / FAQは<section class="faq"><details><summary>Q</summary>A</details></section> / CTAは<div class="cta-block"> / 著者は<div class="author-box"> / 末尾JSON-LD（Article+FAQPage）\n\nbodyコンテンツのみ出力してください。`
+};}
+function bp_imgprompt(p,a){const s=p.settings;return{
+  system:'あなたは日本向けコンテンツの画像プロンプトエキスパートです。',
+  user:`キーワード:${a.keyword}\nサービス:${s.serviceDesc}\n構成抜粋:${a.structure.slice(0,400)}\n\n4枚（サムネイル・本文前半・本文中盤・まとめ）の英語プロンプトを生成。Japanese/Asian明示、Photorealistic professional、テキスト不要。\n\n【JSONのみ出力】\n[{"role":"thumbnail","label":"サムネイル","prompt":"..."},{"role":"body_1","label":"本文画像1","prompt":"..."},{"role":"body_2","label":"本文画像2","prompt":"..."},{"role":"body_3","label":"本文画像3","prompt":"..."}]`
+};}
+
+// ── Actions ──
+async function runResearch(){
+  const p=getProject(),a=getArticle();if(!p||!a)return;
+  setLoading('research',true);
+  try{
+    const{system,user}=bp_research(p,a.keyword);
+    const res=await callClaude(system,user,2000);
+    await saveArticleField('research',res);
+  }catch(e){alert('エラー: '+e.message);}
+  setLoading('research',false);
+}
+async function runStructure(){
+  const p=getProject(),a=getArticle();if(!p||!a)return;
+  if(!a.research){alert('先にリサーチを実行してください');return;}
+  setLoading('structure',true);
+  try{
+    const{system,user}=bp_structure(p,a);
+    await saveArticleField('structure',await callClaude(system,user,2000));
+  }catch(e){alert('エラー: '+e.message);}
+  setLoading('structure',false);
+}
+async function runBody(){
+  const p=getProject(),a=getArticle();if(!p||!a)return;
+  if(!a.structure){alert('先に構成案を作成してください');return;}
+  setLoading('body',true);
+  try{
+    const{system,user}=bp_body(p,a);
+    await saveArticleField('body',await callClaude(system,user,4000));
+  }catch(e){alert('エラー: '+e.message);}
+  setLoading('body',false);
+}
+async function runImagePrompts(){
+  const p=getProject(),a=getArticle();if(!p||!a)return;
+  if(!a.structure){alert('先に構成案を作成してください');return;}
+  setLoading('imgprompt',true);
+  try{
+    const{system,user}=bp_imgprompt(p,a);
+    const raw=await callClaude(system,user,800);
+    const clean=raw.replace(/```json|```/g,'').trim();
+    const prompts=JSON.parse(clean);
+    const existing=a.imagePrompts||[];
+    const merged=prompts.map((np,i)=>({...np,imageUrl:existing[i]?.imageUrl||''}));
+    await saveArticleField('imagePrompts',merged);
+  }catch(e){alert('プロンプト生成エラー: '+e.message);}
+  setLoading('imgprompt',false);
+}
+async function generateOneImage(idx){
+  const a=getArticle();if(!a)return;
+  const ip=a.imagePrompts[idx];if(!ip)return;
+  setLoading('img_'+idx,true);
+  try{
+    const url=await generateIdeogramImage(ip.prompt);
+    const arr=[...a.imagePrompts];arr[idx]={...arr[idx],imageUrl:url};
+    await saveArticleField('imagePrompts',arr);
+  }catch(e){alert('画像生成エラー: '+e.message);}
+  setLoading('img_'+idx,false);
+}
+async function generateAllImages(){
+  const a=getArticle();if(!a||!a.imagePrompts.length)return;
+  for(let i=0;i<a.imagePrompts.length;i++)await generateOneImage(i);
+}
+
+function buildPreviewHtml(p,a){
+  let html=a.body||'';const s=p.settings;
+  (a.imagePrompts||[]).forEach((ip,i)=>{if(ip.imageUrl)html=html.replace(`[IMAGE_${i+1}]`,ip.imageUrl);});
+  return`<style>body{font-family:-apple-system,"Hiragino Sans",sans-serif;max-width:800px;margin:0 auto;padding:24px;color:#1a1a1a;line-height:1.8}h2{font-size:20px;margin:24px 0 10px;border-left:4px solid ${s.mainColor};padding-left:12px}h3{font-size:16px;margin:18px 0 8px}p{margin-bottom:12px}table{border-collapse:collapse;width:100%;margin:12px 0}th,td{border:1px solid #ddd;padding:8px 12px}th{background:#f0f4ff}.cta-block{background:linear-gradient(135deg,${s.mainColor},#a78bfa);color:#fff;padding:24px;border-radius:10px;text-align:center;margin:24px 0}.author-box{background:#f8f8f8;border-radius:8px;padding:16px;margin-top:24px;font-size:13px}img{max-width:100%;border-radius:8px;margin:12px 0}details{border:1px solid #ddd;border-radius:6px;padding:12px;margin-bottom:8px}summary{font-weight:600;cursor:pointer}</style>${html}`;
+}
+
+async function exportZip(){
+  const p=getProject(),a=getArticle();if(!p||!a||!a.body)return;
+  setLoading('export',true);
+  try{
+    const zip=new JSZip();const folder=zip.folder(`article_${a.id}`);
+    const slug=a.keyword.replace(/\s+/g,'-').replace(/[^\w\-]/g,'');
+    folder.file('article.json',JSON.stringify({id:a.id,keyword:a.keyword,slug,project:p.name,siteName:p.settings.siteName,generatedAt:new Date().toISOString(),body:a.body,research:a.research,structure:a.structure,images:(a.imagePrompts||[]).map((ip,i)=>({role:ip.role,label:ip.label,filename:`image_${i+1}.png`,prompt:ip.prompt,url:ip.imageUrl||null})),settings:{ctaText:p.settings.ctaText,ctaUrl:p.settings.ctaUrl,mainColor:p.settings.mainColor,category:p.settings.category}},null,2));
+    for(let i=0;i<(a.imagePrompts||[]).length;i++){const ip=a.imagePrompts[i];if(ip.imageUrl){try{folder.file(`image_${i+1}.png`,await(await fetch(ip.imageUrl)).blob());}catch{folder.file(`image_${i+1}_url.txt`,ip.imageUrl);}}}
+    folder.file('preview.html',`<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>${a.keyword}</title></head><body>${buildPreviewHtml(p,a)}</body></html>`);
+    const blob=await zip.generateAsync({type:'blob'});
+    const url=URL.createObjectURL(blob);const link=document.createElement('a');
+    link.href=url;link.download=`${slug||a.id}_article.zip`;link.click();
+  }catch(e){alert('エクスポートエラー: '+e.message);}
+  setLoading('export',false);
+}
+
+function copyText(t){navigator.clipboard.writeText(t).catch(()=>{})}
+
+// ── Render ──
+function render(){
+  document.getElementById('app').innerHTML=renderApp();
+  bindEvents();
+}
+
+function renderApp(){
+  return`
+<div class="hdr">
+  <div class="hdr-logo">✦ SEO記事生成ツール</div>
+  <div class="hdr-bc">${renderBreadcrumb()}</div>
+  <div class="hdr-right">
+    <div class="ikey-wrap">
+      <label>Ideogram Key</label>
+      <input type="password" id="ikey-input" value="${escH(S.iKey)}" placeholder="xxxxxxxxxx" autocomplete="off">
+    </div>
+    ${S.connected
+      ?`<div class="conn-badge"><div class="conn-dot" style="background:var(--gr)"></div>Supabase接続中</div>
+        <button class="btn btn-sm btn-sec" data-action="open-sb-settings">⚙</button>`
+      :`<button class="btn btn-sm btn-ac" data-action="open-sb-settings">${S.connecting?'<span class="spin"></span>':'🔌 Supabase接続'}</button>`
+    }
+  </div>
+</div>
+<div class="body-wrap">
+  <div class="sidebar">${S.connected?renderSidebar():''}</div>
+  <div class="content">${S.connected?renderMain():renderSetup()}</div>
+</div>
+${S.modal?renderModal():''}
+`;}
+
+function renderBreadcrumb(){
+  const parts=[`<span class="bc-link" data-nav="home">プロジェクト一覧</span>`];
+  if(S.pid){
+    const p=getProject();
+    parts.push(`<span class="sep">›</span><span class="bc-link" data-nav="proj">${escH(p?.name||'')}</span>`);
+    if(S.view==='proj-settings')parts.push(`<span class="sep">›</span><span>設定</span>`);
+    if(S.view==='article'&&S.aid){const a=getArticle();parts.push(`<span class="sep">›</span><span>${escH(a?.keyword||'')}</span>`);}
+  }
+  return parts.join('');
+}
+
+function renderSidebar(){
+  if(!S.pid)return`<div class="sb-sec"><div class="sb-label">ナビゲーション</div><div class="sb-item act"><span>🏠</span>プロジェクト一覧</div></div>`;
+  const p=getProject();if(!p)return'';
+  const arts=getArticles();
+  return`<div class="sb-sec"><div class="sb-label">プロジェクト</div>
+    <div class="sb-item ${S.view==='proj'?'act':''}" data-nav="proj"><span>📁</span><span class="sb-art">${escH(p.name)}</span></div>
+    <div class="sb-item ${S.view==='proj-settings'?'act':''}" data-nav="proj-settings"><span>⚙️</span>プロジェクト設定</div>
+  </div>
+  <div class="sb-sec"><div class="sb-label">記事 (${arts.length})</div>
+    ${arts.map(a=>`<div class="sb-item ${S.aid===a.id&&S.view==='article'?'act':''}" data-nav-art="${a.id}"><span class="sb-dot"></span><span class="sb-art">${escH(a.keyword)}</span></div>`).join('')}
+    <div class="sb-item" style="color:var(--ac)" data-action="new-article"><span>＋</span>新規記事</div>
+  </div>`;
+}
+
+function renderMain(){
+  if(!S.connected)return renderSetup();
+  switch(S.view){
+    case'home':return renderHome();
+    case'proj':return renderProjList();
+    case'proj-settings':return renderProjSettings();
+    case'article':return renderArticleEditor();
+    default:return renderHome();
+  }
+}
+
+// ── Setup Screen ──
+function renderSetup(){
+  return`<div class="setup-wrap">
+    <div style="font-size:20px;font-weight:700;margin-bottom:6px">セットアップ</div>
+    <div style="color:var(--tx2);margin-bottom:24px;font-size:13px">Supabaseに接続してプロジェクト・記事を永続保存します</div>
+
+    <div class="setup-step">
+      <div class="setup-num">1</div>
+      <div class="setup-body">
+        <h3>Supabase でテーブルを作成</h3>
+        <p style="color:var(--tx2);font-size:12px;margin-bottom:6px">Supabaseプロジェクトの SQL Editor で下記を実行してください。</p>
+        <div class="code-block">create table projects (
+  id text primary key,
+  name text not null,
+  settings jsonb default '{}',
+  created_at timestamptz default now()
+);
+
+create table articles (
+  id text primary key,
+  project_id text references projects(id) on delete cascade,
+  keyword text not null,
+  research text default '',
+  structure text default '',
+  body text default '',
+  image_prompts jsonb default '[]',
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+-- RLS を無効化（個人利用の場合）
+alter table projects disable row level security;
+alter table articles disable row level security;</div>
+        <button class="btn btn-sm btn-sec" data-copy-sql="1">SQLをコピー</button>
+      </div>
+    </div>
+
+    <div class="setup-step">
+      <div class="setup-num">2</div>
+      <div class="setup-body">
+        <h3>接続情報を入力</h3>
+        <p style="color:var(--tx2);font-size:12px;margin-bottom:10px">Settings → API から取得してください。</p>
+        <div class="fg"><label>Supabase URL（Project URL）</label>
+          <input class="fi" id="sb-url-input" value="${escH(S.sbUrl)}" placeholder="https://xxxxxxxxxx.supabase.co"></div>
+        <div class="fg"><label>Anon Key（anon public）</label>
+          <input class="fi" id="sb-key-input" type="password" value="${escH(S.sbKey)}" placeholder="eyJhbGciOiJIUzI1..."></div>
+        <button class="btn btn-ac" data-action="connect-sb" ${S.connecting?'disabled':''}>
+          ${S.connecting?'<span class="spin"></span> 接続中...':'🔌 接続する'}
+        </button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Supabase Settings Modal ──
+function renderModal(){
+  const m=S.modal;
+  if(m.type==='sb-settings')return`<div class="modal-bg" id="modal-bg">
+    <div class="modal">
+      <div class="modal-title">⚙ Supabase設定</div>
+      <div class="fg"><label>Supabase URL</label><input class="fi" id="sb-url-input" value="${escH(S.sbUrl)}" placeholder="https://xxxxxxxxxx.supabase.co"></div>
+      <div class="fg"><label>Anon Key</label><input class="fi" id="sb-key-input" type="password" value="${escH(S.sbKey)}"></div>
+      <div class="modal-actions">
+        <button class="btn btn-sec" data-action="modal-cancel">閉じる</button>
+        <button class="btn btn-ac" data-action="connect-sb" ${S.connecting?'disabled':''}>${S.connecting?'<span class="spin"></span>':'再接続'}</button>
+      </div>
+    </div>
+  </div>`;
+  if(m.type==='new-project')return`<div class="modal-bg" id="modal-bg">
+    <div class="modal">
+      <div class="modal-title">📁 新規プロジェクト</div>
+      <div class="fg"><label>プロジェクト名</label><input class="fi" id="modal-input" value="新規プロジェクト"></div>
+      <div class="modal-actions">
+        <button class="btn btn-sec" data-action="modal-cancel">キャンセル</button>
+        <button class="btn btn-ac" data-action="modal-create-project">作成</button>
+      </div>
+    </div>
+  </div>`;
+  if(m.type==='new-article')return`<div class="modal-bg" id="modal-bg">
+    <div class="modal">
+      <div class="modal-title">📝 新規記事</div>
+      <div class="fg"><label>ターゲットキーワード</label><input class="fi" id="modal-input" placeholder="例：妊婦 抱き枕 おすすめ"></div>
+      <div class="modal-actions">
+        <button class="btn btn-sec" data-action="modal-cancel">キャンセル</button>
+        <button class="btn btn-ac" data-action="modal-create-article">作成</button>
+      </div>
+    </div>
+  </div>`;
+  return'';
+}
+
+function renderHome(){
+  return`<div>
+    <div class="card-title" style="font-size:17px">📁 プロジェクト一覧</div>
+    <div class="home-grid">
+      ${S.projects.map(p=>`<div class="proj-card" data-nav-proj="${p.id}">
+        <div class="proj-card-name">${escH(p.name)}</div>
+        <div class="proj-card-meta">${(S.articles[p.id]||[]).length}件の記事</div>
+      </div>`).join('')}
+      <div class="proj-card proj-card-add" data-action="new-project"><span style="font-size:22px">＋</span><span>新規プロジェクト</span></div>
+    </div>
+  </div>`;
+}
+
+function renderProjList(){
+  const p=getProject();if(!p)return'';const arts=getArticles();
+  return`<div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-size:17px;font-weight:600">${escH(p.name)}</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-sec" data-nav="proj-settings">⚙ 設定</button>
+        <button class="btn btn-ac" data-action="new-article">＋ 新規記事</button>
+      </div>
+    </div>
+    ${arts.length===0?'<div style="color:var(--tx2);padding:24px 0">記事がありません。「新規記事」から作成してください。</div>':''}
+    ${arts.map(a=>`<div class="art-item" data-nav-art="${a.id}">
+      <div><div style="font-size:13px;font-weight:500">${escH(a.keyword)}</div><div style="font-size:11px;color:var(--tx2)">${a.createdAt}</div></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        ${getStatusBadge(a)}
+        <button class="btn btn-sm btn-rd" data-del-art="${a.id}" onclick="event.stopPropagation()">削除</button>
+      </div>
+    </div>`).join('')}
+  </div>`;
+}
+
+function getStatusBadge(a){
+  if(a.body&&(a.imagePrompts||[]).some(i=>i.imageUrl))return`<span class="badge b-done">● 完了</span>`;
+  if(a.body)return`<span class="badge b-pend">● 本文完了</span>`;
+  if(a.research)return`<span class="badge b-pend">● 進行中</span>`;
+  return`<span class="badge" style="background:var(--bg3);color:var(--tx2)">● 下書き</span>`;
+}
+
+function renderProjSettings(){
+  const p=getProject();if(!p)return'';const s=p.settings;
+  return`<div>
+    <div class="card-title" style="font-size:17px;margin-bottom:18px">⚙ ${escH(p.name)} の設定</div>
+    <div class="card"><div class="card-title">基本情報</div>
+      <div class="fg"><label>プロジェクト名</label><input class="fi" id="set-name" value="${escH(p.name)}"></div>
+      <div class="g2">
+        <div class="fg"><label>サイト名</label><input class="fi" id="set-siteName" value="${escH(s.siteName)}" placeholder="HUGMIN"></div>
+        <div class="fg"><label>サイトURL</label><input class="fi" id="set-siteUrl" value="${escH(s.siteUrl)}" placeholder="https://example.com"></div>
+      </div>
+      <div class="fg"><label>サービス・商品説明</label><textarea class="fi" id="set-serviceDesc" rows="3">${escH(s.serviceDesc)}</textarea></div>
+    </div>
+    <div class="card"><div class="card-title">CTA・デザイン</div>
+      <div class="g2">
+        <div class="fg"><label>CTA文言</label><input class="fi" id="set-ctaText" value="${escH(s.ctaText)}"></div>
+        <div class="fg"><label>CTA URL</label><input class="fi" id="set-ctaUrl" value="${escH(s.ctaUrl)}"></div>
+      </div>
+      <div class="g2">
+        <div class="fg"><label>メインカラー</label><div class="color-row"><input type="color" id="set-mainColor" value="${s.mainColor}"><input class="fi" id="set-mainColorHex" value="${escH(s.mainColor)}" style="max-width:110px"></div></div>
+        <div class="fg"><label>フォント</label><input class="fi" id="set-fontFamily" value="${escH(s.fontFamily)}"></div>
+      </div>
+    </div>
+    <div class="card"><div class="card-title">記事生成設定</div>
+      <div class="fg"><label>NG語句（カンマ区切り）</label><input class="fi" id="set-ngWords" value="${escH(s.ngWords)}" placeholder="激安, 絶対, 最強"></div>
+      <div class="fg"><label>トンマナ・文体</label><textarea class="fi" id="set-tone" rows="2">${escH(s.tone)}</textarea></div>
+      <div class="fg"><label>ターゲット読者像</label><textarea class="fi" id="set-targetReader" rows="2">${escH(s.targetReader)}</textarea></div>
+      <div class="fg"><label>カテゴリ</label><input class="fi" id="set-category" value="${escH(s.category)}" placeholder="睡眠, マタニティ"></div>
+    </div>
+    <div class="card"><div class="card-title">E-E-A-T・内部リンク</div>
+      <div class="g2">
+        <div class="fg"><label>著者名</label><input class="fi" id="set-authorName" value="${escH(s.authorName)}"></div>
+        <div class="fg"><label>著者プロフィール</label><input class="fi" id="set-authorProfile" value="${escH(s.authorProfile)}"></div>
+      </div>
+      <div class="fg"><label>内部リンク候補（1行1件）</label><textarea class="fi" id="set-internalLinks" rows="4">${escH(s.internalLinks)}</textarea></div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ac" data-action="save-settings">💾 保存</button>
+      <button class="btn btn-sec" data-nav="proj">キャンセル</button>
+      <button class="btn btn-rd" style="margin-left:auto" data-action="delete-project">削除</button>
+    </div>
+  </div>`;
+}
+
+function renderArticleEditor(){
+  const a=getArticle();if(!a)return'';
+  const tabs=['① リサーチ','② 構成案','③ 本文HTML','④ 画像生成','⑤ プレビュー・出力'];
+  const done=[!!a.research,!!a.structure,!!a.body,(a.imagePrompts||[]).length>0,false];
+  return`<div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <div style="font-size:15px;font-weight:600">📝 ${escH(a.keyword)}</div>${getStatusBadge(a)}
+      ${S.saveStatus?`<span style="font-size:11px;color:var(--gr);margin-left:4px">${S.saveStatus}</span>`:''}
+    </div>
+    <div class="stepbar">${['リサーチ','構成案','本文HTML','画像生成','完了'].map((l,i)=>`<div class="step ${done[i]?'done':i===S.tab?'cur':''}"><div class="sn">${done[i]?'✓':(i+1)}</div><span>${l}</span></div>${i<4?'<div class="step-line"></div>':''}`).join('')}</div>
+    <div class="tabs">${tabs.map((t,i)=>`<div class="tab ${i===S.tab?'act':''} ${done[i]&&i!==S.tab?'done':''}" data-tab="${i}">${t}</div>`).join('')}</div>
+    ${renderTabContent(a)}
+  </div>`;
+}
+
+function renderTabContent(a){
+  switch(S.tab){
+    case 0:return renderTabResearch(a);
+    case 1:return renderTabStructure(a);
+    case 2:return renderTabBody(a);
+    case 3:return renderTabImages(a);
+    case 4:return renderTabPreview(a);
+    default:return'';
+  }
+}
+
+function renderTabResearch(a){const ld=S.loading.research;return`<div>
+  <div class="card"><div class="card-title">🔍 リサーチ実行</div>
+    <div class="fg"><label>対象キーワード</label><input class="fi" id="art-keyword" value="${escH(a.keyword)}" style="font-weight:600;font-size:15px"></div>
+    <button class="btn btn-ac" data-action="run-research" ${ld?'disabled':''}>${ld?'<span class="spin"></span> 分析中...':'▶ リサーチ開始'}</button>
+  </div>
+  ${a.research?`<div class="card"><div class="card-title">📊 リサーチ結果 <span class="badge b-done">完了</span></div>
+    <textarea class="out-ta" id="out-research" style="min-height:340px">${escH(a.research)}</textarea>
+    <div class="out-actions"><span class="save-status"></span><button class="btn btn-sm btn-sec" data-copy="research">コピー</button><button class="btn btn-sm btn-ac" data-tab="1">次へ→構成案</button></div>
+  </div>`:''}
+</div>`;}
+
+function renderTabStructure(a){const ld=S.loading.structure;return`<div>
+  ${!a.research?'<div class="alert alert-info">先にリサーチを実行してください</div>':''}
+  <div class="card"><div class="card-title">📐 構成案生成</div>
+    <button class="btn btn-ac" data-action="run-structure" ${ld||!a.research?'disabled':''}>${ld?'<span class="spin"></span> 生成中...':'▶ 構成案を作成'}</button>
+  </div>
+  ${a.structure?`<div class="card"><div class="card-title">📋 構成案 <span class="badge b-done">完了</span></div>
+    <textarea class="out-ta" id="out-structure" style="min-height:380px">${escH(a.structure)}</textarea>
+    <div class="out-actions"><button class="btn btn-sm btn-sec" data-copy="structure">コピー</button><button class="btn btn-sm btn-ac" data-tab="2">次へ→本文HTML</button></div>
+  </div>`:''}
+</div>`;}
+
+function renderTabBody(a){const ld=S.loading.body;return`<div>
+  ${!a.structure?'<div class="alert alert-info">先に構成案を作成してください</div>':''}
+  <div class="card"><div class="card-title">✍️ 本文HTML生成</div>
+    <div class="alert alert-info" style="font-size:11px">図表・FAQ・CTA・著者プロフィール・JSON-LDが自動生成されます</div>
+    <button class="btn btn-ac" data-action="run-body" ${ld||!a.structure?'disabled':''}>${ld?'<span class="spin"></span> 生成中...':'▶ 本文HTMLを生成'}</button>
+  </div>
+  ${a.body?`<div class="card"><div class="card-title">📄 本文HTML <span class="badge b-done">完了</span></div>
+    <textarea class="out-ta" id="out-body" style="min-height:380px">${escH(a.body)}</textarea>
+    <div class="out-actions"><button class="btn btn-sm btn-sec" data-copy="body">HTMLコピー</button><button class="btn btn-sm btn-ac" data-tab="3">次へ→画像生成</button></div>
+  </div>`:''}
+</div>`;}
+
+function renderTabImages(a){const ld=S.loading.imgprompt,ldAll=S.loading.imgall;const ips=a.imagePrompts||[];return`<div>
+  ${!a.structure?'<div class="alert alert-info">先に構成案を作成してください</div>':''}
+  <div class="card"><div class="card-title">🎨 画像プロンプト & 生成</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-ac" data-action="run-imgprompt" ${ld||!a.structure?'disabled':''}>${ld?'<span class="spin"></span> 生成中...':'▶ プロンプト生成'}</button>
+      ${ips.length>0?`<button class="btn btn-ac2" data-action="gen-all-images" ${ldAll?'disabled':''}>${ldAll?'<span class="spin"></span>':'🖼'} 全画像一括生成</button>`:''}
+    </div>
+  </div>
+  ${ips.length>0?`<div class="card"><div class="card-title">🖼 画像</div>
+    <div class="img-grid">${ips.map((ip,i)=>`<div class="img-card">
+      ${ip.imageUrl?`<img src="${escH(ip.imageUrl)}" alt="${escH(ip.label)}">`:`<div class="img-holder">${S.loading['img_'+i]?'<span class="spin" style="border-top-color:var(--ac)"></span>':'未生成'}</div>`}
+      <div class="img-card-body">
+        <div class="img-card-label">${escH(ip.label)}</div>
+        <textarea class="prompt-ta" data-ip-idx="${i}">${escH(ip.prompt)}</textarea>
+        <button class="btn btn-sm ${ip.imageUrl?'btn-sec':'btn-ac2'}" data-gen-img="${i}" ${S.loading['img_'+i]?'disabled':''}>${S.loading['img_'+i]?'<span class="spin"></span>':ip.imageUrl?'🔄 再生成':'🖼 生成'}</button>
+        ${ip.imageUrl?`<button class="btn btn-sm btn-sec" style="margin-left:4px" onclick="window.open('${escH(ip.imageUrl)}','_blank')">↗</button>`:''}
+      </div>
+    </div>`).join('')}</div>
+    <div class="out-actions" style="margin-top:14px"><button class="btn btn-sm btn-ac" data-tab="4">次へ→プレビュー</button></div>
+  </div>`:''}
+</div>`;}
+
+function renderTabPreview(a){const p=getProject();if(!p)return'';const ld=S.loading.export;return`<div>
+  <div class="card"><div class="card-title">📦 エクスポート</div>
+    <div class="alert alert-info" style="font-size:11px">article.json・preview.html・画像ファイルをZIPで出力します</div>
+    <button class="btn btn-gr" data-action="export-zip" ${ld||!a.body?'disabled':''}>${ld?'<span class="spin"></span> 作成中...':'📦 ZIPエクスポート'}</button>
+  </div>
+  ${a.body?`<div class="card"><div class="card-title">👁 プレビュー</div>
+    <div style="background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:16px">
+      <div class="preview-frame" id="preview-render"></div>
+    </div>
+  </div>`:'<div class="alert alert-info">本文HTMLが生成されるとプレビューが表示されます</div>'}
+</div>`;}
+
+// ── Bind ──
+function bindEvents(){
+  const ik=document.getElementById('ikey-input');
+  if(ik)ik.oninput=e=>{S.iKey=e.target.value;window.storage?.set('ideogram-key',e.target.value).catch(()=>{});};
+
+  // Setup / modal inputs
+  ['sb-url-input','sb-key-input'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.oninput=e=>{if(id==='sb-url-input')S.sbUrl=e.target.value;else S.sbKey=e.target.value;};
+  });
+
+  // Textarea sync (no auto-save on every keystroke; save on action completion)
+  ['research','structure','body'].forEach(f=>{
+    const el=document.getElementById('out-'+f);
+    if(el)el.oninput=e=>{updateArticleLocal(f,e.target.value);};
+  });
+
+  const kwEl=document.getElementById('art-keyword');
+  if(kwEl)kwEl.oninput=e=>{updateArticleLocal('keyword',e.target.value);};
+
+  document.querySelectorAll('[data-ip-idx]').forEach(el=>{
+    el.oninput=e=>{
+      const a=getArticle();if(!a)return;
+      const idx=parseInt(e.target.dataset.ipIdx);
+      const arr=[...a.imagePrompts];arr[idx]={...arr[idx],prompt:e.target.value};
+      updateArticleLocal('imagePrompts',arr);
+    };
+  });
+
+  const cp=document.getElementById('set-mainColor'),ch=document.getElementById('set-mainColorHex');
+  if(cp&&ch){cp.oninput=e=>ch.value=e.target.value;ch.oninput=e=>{if(/^#[0-9a-f]{6}$/i.test(e.target.value))cp.value=e.target.value;};}
+
+  // Preview
+  if(S.view==='article'&&S.tab===4){
+    const p=getProject(),a=getArticle();
+    if(p&&a&&a.body){const el=document.getElementById('preview-render');if(el)el.innerHTML=buildPreviewHtml(p,a);}
+  }
+
+  const mbg=document.getElementById('modal-bg');
+  if(mbg)mbg.onclick=e=>{if(e.target===mbg){S.modal=null;render();}};
+}
+
+// ── Event delegation ──
+const SQL_TEXT=`create table projects (\n  id text primary key,\n  name text not null,\n  settings jsonb default '{}',\n  created_at timestamptz default now()\n);\n\ncreate table articles (\n  id text primary key,\n  project_id text references projects(id) on delete cascade,\n  keyword text not null,\n  research text default '',\n  structure text default '',\n  body text default '',\n  image_prompts jsonb default '[]',\n  created_at timestamptz default now(),\n  updated_at timestamptz default now()\n);\n\nalter table projects disable row level security;\nalter table articles disable row level security;`;
+
+document.addEventListener('click',async e=>{
+  const t=e.target.closest('[data-nav],[data-nav-proj],[data-nav-art],[data-action],[data-tab],[data-copy],[data-copy-sql],[data-gen-img],[data-del-art]');
+  if(!t)return;
+
+  if(t.dataset.copySql){copyText(SQL_TEXT);const o=t.textContent;t.textContent='✓ コピー完了';setTimeout(()=>{t.textContent=o;},1500);return;}
+  if(t.dataset.copy){const a=getArticle();if(!a)return;copyText(a[t.dataset.copy]||'');const o=t.textContent;t.textContent='✓ コピー完了';setTimeout(()=>render(),1500);return;}
+  if(t.dataset.genImg){await generateOneImage(parseInt(t.dataset.genImg));return;}
+
+  if(t.dataset.nav){
+    const n=t.dataset.nav;
+    if(n==='home'){S.view='home';S.pid=null;S.aid=null;}
+    else if(n==='proj'){S.view='proj';S.aid=null;}
+    else if(n==='proj-settings')S.view='proj-settings';
+    render();return;
+  }
+  if(t.dataset.navProj){
+    S.pid=t.dataset.navProj;S.view='proj';S.aid=null;
+    if(!S.articles[S.pid])await fetchArticles(S.pid);
+    else render();return;
+  }
+  if(t.dataset.navArt){S.aid=t.dataset.navArt;S.view='article';S.tab=0;render();return;}
+  if(t.dataset.tab){S.tab=parseInt(t.dataset.tab);render();return;}
+
+  if(t.dataset.delArt){
+    if(!confirm('この記事を削除しますか？'))return;
+    try{await dbDeleteArticle(t.dataset.delArt);}catch(e){alert('削除エラー: '+e.message);return;}
+    if(S.articles[S.pid])S.articles[S.pid]=S.articles[S.pid].filter(a=>a.id!==t.dataset.delArt);
+    if(S.aid===t.dataset.delArt){S.aid=null;S.view='proj';}
+    render();return;
+  }
+
+  const action=t.dataset.action;if(!action)return;
+
+  if(action==='modal-cancel'){S.modal=null;render();return;}
+  if(action==='open-sb-settings'){S.modal={type:'sb-settings'};render();return;}
+
+  if(action==='connect-sb'){
+    // read current input values
+    const u=document.getElementById('sb-url-input');const k=document.getElementById('sb-key-input');
+    if(u)S.sbUrl=u.value.trim();if(k)S.sbKey=k.value.trim();
+    await connectSupabase();return;
+  }
+
+  if(action==='new-project'){S.modal={type:'new-project'};render();return;}
+  if(action==='modal-create-project'){
+    const inp=document.getElementById('modal-input');
+    const name=(inp?.value||'').trim()||'新規プロジェクト';
+    const np=defaultProject(name);
+    try{await dbSaveProject(np);}catch(e){alert('作成エラー: '+e.message);return;}
+    S.projects.push(np);S.pid=np.id;S.view='proj-settings';S.modal=null;S.articles[np.id]=[];render();return;
+  }
+  if(action==='new-article'){S.modal={type:'new-article'};render();return;}
+  if(action==='modal-create-article'){
+    const inp=document.getElementById('modal-input');
+    const kw=(inp?.value||'').trim();if(!kw)return;
+    const p=getProject();if(!p)return;
+    const na=defaultArticle(kw,p.id);
+    try{await dbSaveArticle(na);}catch(e){alert('作成エラー: '+e.message);return;}
+    if(!S.articles[p.id])S.articles[p.id]=[];
+    S.articles[p.id].push(na);S.aid=na.id;S.view='article';S.tab=0;S.modal=null;render();return;
+  }
+
+  if(action==='save-settings'){
+    const p=getProject();if(!p)return;
+    const ne=document.getElementById('set-name');if(ne)p.name=ne.value;
+    ['siteName','siteUrl','serviceDesc','ctaText','ctaUrl','mainColor','fontFamily','ngWords','tone','targetReader','category','authorName','authorProfile','internalLinks'].forEach(f=>{const el=document.getElementById('set-'+f);if(el)p.settings[f]=el.value;});
+    try{await dbSaveProject(p);setSaveStatus('✓ 保存済み');}catch(e){alert('保存エラー: '+e.message);return;}
+    S.view='proj';render();return;
+  }
+  if(action==='delete-project'){
+    if(!confirm('プロジェクトと全記事を削除しますか？'))return;
+    try{await dbDeleteProject(S.pid);}catch(e){alert('削除エラー: '+e.message);return;}
+    S.projects=S.projects.filter(p=>p.id!==S.pid);delete S.articles[S.pid];
+    S.pid=null;S.aid=null;S.view='home';render();return;
+  }
+  if(action==='run-research'){await runResearch();return;}
+  if(action==='run-structure'){await runStructure();return;}
+  if(action==='run-body'){await runBody();return;}
+  if(action==='run-imgprompt'){await runImagePrompts();return;}
+  if(action==='gen-all-images'){await generateAllImages();return;}
+  if(action==='export-zip'){await exportZip();return;}
+});
+
+function escH(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// ── Init ──
+render();
+loadCredentials();
+</script>
+</body>
+</html>
