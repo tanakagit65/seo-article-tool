@@ -147,22 +147,23 @@ function setLoading(k,v){S.loading[k]=v;render()}
 function setSaveStatus(msg){S.saveStatus=msg;render();if(msg)setTimeout(()=>{S.saveStatus='';render()},2000)}
 
 // ── Persistent storage for credentials ──
-async function storeCredentials(){
+function storeCredentials(){
   try{
-    await window.storage.set('sb-url',S.sbUrl);
-    await window.storage.set('sb-key',S.sbKey);
-    await window.storage.set('ideogram-key',S.iKey);
+    if(S.sbUrl)localStorage.setItem('sb-url',S.sbUrl);
+    if(S.sbKey)localStorage.setItem('sb-key',S.sbKey);
+    if(S.iKey)localStorage.setItem('ideogram-key',S.iKey);
   }catch(e){}
 }
 async function loadCredentials(){
   try{
-    const u=await window.storage.get('sb-url');
-    const k=await window.storage.get('sb-key');
-    const ik=await window.storage.get('ideogram-key');
-    if(u)S.sbUrl=u.value;
-    if(k)S.sbKey=k.value;
-    if(ik)S.iKey=ik.value;
+    const u=localStorage.getItem('sb-url');
+    const k=localStorage.getItem('sb-key');
+    const ik=localStorage.getItem('ideogram-key');
+    if(u)S.sbUrl=u;
+    if(k)S.sbKey=k;
+    if(ik)S.iKey=ik;
     if(S.sbUrl&&S.sbKey)await connectSupabase(true);
+    else render();
   }catch(e){render();}
 }
 
